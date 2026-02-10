@@ -4,6 +4,21 @@
 
 local state = {}
 
+--- Normalize a path by resolving . and .. segments.
+local function normalize_path(path)
+	local parts = {}
+	for part in path:gmatch("[^/]+") do
+		if part == ".." then
+			if #parts > 0 then
+				table.remove(parts)
+			end
+		elseif part ~= "." then
+			parts[#parts + 1] = part
+		end
+	end
+	return "/" .. table.concat(parts, "/")
+end
+
 local function is_at_root()
 	local cwd = tostring(cx.active.current.cwd)
 	return cwd == state.root
@@ -13,21 +28,26 @@ local function is_within_root(path)
 	if path == state.root then
 		return true
 	end
-	-- Handle root "/" specially
 	if state.root == "/" then
 		return true
 	end
-	return path:sub(1, #state.root + 1) == state.root .. "/"
+	return path:sub(1, #state._root_prefix) == state._root_prefix
 end
 
 local function setup(st, opts)
 	opts = opts or {}
 
+	-- Guard against double-setup (prevents Tab.layout self-referential loop)
+	if st._initialized then
+		return
+	end
+	st._initialized = true
+
 	-- Capture state reference for use in callbacks
 	state = st
 
-	-- Root resolution: YAZI_ROOT > PWD > HOME
-	state.root = os.getenv("YAZI_ROOT") or os.getenv("PWD") or os.getenv("HOME")
+	-- Root resolution: YAZI_ROOT > PWD > HOME > "/"
+	state.root = os.getenv("YAZI_ROOT") or os.getenv("PWD") or os.getenv("HOME") or "/"
 
 	-- Capture HOME for use in sync context (os.getenv doesn't work there)
 	state.home = os.getenv("HOME") or ""
@@ -36,6 +56,9 @@ local function setup(st, opts)
 	if state.root ~= "/" and state.root:sub(-1) == "/" then
 		state.root = state.root:sub(1, -2)
 	end
+
+	-- Cache prefix for is_within_root checks
+	state._root_prefix = state.root .. "/"
 
 	-- Configuration
 	state.enabled = true
@@ -58,7 +81,6 @@ local function setup(st, opts)
 					})
 					:split(self._area)
 			else
-				-- When disabled, restore original layout
 				state._original_tab_layout(self)
 			end
 		end
@@ -157,6 +179,9 @@ local function cd(job)
 		resolved = tostring(cx.active.current.cwd) .. "/" .. resolved
 	end
 
+	-- Normalize to resolve .. and . segments
+	resolved = normalize_path(resolved)
+
 	if is_within_root(resolved) then
 		ya.emit("cd", { target })
 	else
@@ -172,14 +197,14 @@ local function cd(job)
 end
 
 local function entry(_, job)
-	local action = job.args[1]
+	local args = job and job.args or {}
+	local action = args[1]
 
 	if action == "toggle" then
 		toggle()
 	elseif action == "cd" then
 		cd(job)
 	else
-		-- Default: "leave" behavior
 		leave()
 	end
 end
