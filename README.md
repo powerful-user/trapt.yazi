@@ -4,8 +4,7 @@ Constrain [Yazi](https://yazi-rs.github.io/) file navigation to a root directory
 
 When active, pressing `h`/`<Left>` to navigate upward is blocked at the root. The root is automatically captured from `$PWD` when Yazi launches, or can be overridden via `YAZI_ROOT`.
 
- <video autoplay nocontrols mute loop src="trapt.mp4" />
-  
+![Looping demonstration of trapt.yazi trap notification](trapt.gif)
   
 ## Requirements
 
