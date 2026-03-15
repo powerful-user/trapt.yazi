@@ -75,9 +75,9 @@ local function setup(st, opts)
 				self._chunks = ui.Layout()
 					:direction(ui.Layout.HORIZONTAL)
 					:constraints({
-						ui.Constraint.Ratio(0, 7),
-						ui.Constraint.Ratio(1, 7),
-						ui.Constraint.Ratio(6, 7),
+						ui.Constraint.Ratio(0, 4),
+						ui.Constraint.Ratio(1, 4),
+						ui.Constraint.Ratio(3, 4),
 					})
 					:split(self._area)
 			else
